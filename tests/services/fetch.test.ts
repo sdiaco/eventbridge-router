@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { HttpClient } from '@classes/fetch';
+import { HttpClient } from '@services/fetch';
 import { HttpError } from '@/types/fetch';
 
 // Mock global fetch

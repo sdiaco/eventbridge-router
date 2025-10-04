@@ -8,7 +8,6 @@
       "@/*": ["./src/*"],
       "@plugins/*": ["./plugins/*"],
       "@services/*": ["./services/*"],
-      "@classes/*": ["./src/core/classes/*"],
     },
     "esModuleInterop": true,
     "strict": true,

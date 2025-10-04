@@ -1,6 +1,6 @@
 import { Plugin, PluginContext, PluginEvent } from "@/types/plugins";
 import { SlackWebhookPayload } from "./types";
-import { HttpClient } from "@classes/fetch";
+import { HttpClient } from "@services/fetch";
 
 export class SlackNotifier implements Plugin {
   name = 'slack-notifier';
@@ -46,7 +46,7 @@ export class SlackNotifier implements Plugin {
       ],
     };
 
-    await this.client.post('xxx', {
+    await this.client.post('***TEST***', {
       body: payload,
     });
 
