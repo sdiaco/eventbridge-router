@@ -22,6 +22,9 @@ export interface PluginMetadata {
   version: string;
   description: string;
   owner: string;
+  avgDurationMs?: number; // durata media osservata
+  maxDurationMs?: number; // worst case scenario
+  executionStrategy?: 'inline' | 'worker'; // default: inline (auto-detected se non specificato)
 }
 
 export interface Logger {
