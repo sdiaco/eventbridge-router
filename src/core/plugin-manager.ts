@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, PluginEvent, Logger, MetricsCollector } from '@/types/plugins';
+import { Plugin, PluginContext, PluginEvent, Logger, MetricsCollector } from '@/types/plugin';
 import { IHttpClient } from '@/types/fetch';
 import { PluginManagerOptions } from '@/types/plugin-manager';
 

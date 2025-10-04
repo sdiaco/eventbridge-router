@@ -109,6 +109,7 @@ export class HttpClient implements IHttpClient {
       responseType,
       validateStatus = (s: number) => s >= 200 && s < 300,
       signal,
+      fireAndForget = false,
     } = options;
 
     // unisci header (default + user + UA)
@@ -119,6 +120,20 @@ export class HttpClient implements IHttpClient {
     };
 
     const finalUrl = this.#buildUrl(url, query);
+
+    // Fire-and-forget: invia senza attendere risposta
+    if (fireAndForget) {
+      fetch(finalUrl, {
+        method,
+        headers: finalHeaders,
+        body: this.#serializeBody(body, finalHeaders),
+        signal,
+      }).catch(() => {
+        // Ignora errori in modalità fire-and-forget
+      });
+      return undefined as T;
+    }
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), perRequestTimeout);
 

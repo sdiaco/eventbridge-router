@@ -573,6 +573,110 @@ describe('HTTP Client', () => {
     });
   });
 
+  describe('Fire-and-Forget', () => {
+    it('dovrebbe inviare richiesta senza attendere risposta', async () => {
+      const client = new HttpClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ success: true }),
+      });
+
+      const result = await client.post('/webhook', {
+        body: { event: 'test' },
+        fireAndForget: true,
+      });
+
+      expect(result).toBeUndefined();
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/webhook',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ event: 'test' }),
+        })
+      );
+    });
+
+    it('dovrebbe ignorare errori in modalità fire-and-forget', async () => {
+      const client = new HttpClient();
+
+      mockFetch.mockRejectedValueOnce(new TypeError('Network error'));
+
+      // Non deve lanciare errori
+      const result = await client.post('/webhook', {
+        body: { event: 'test' },
+        fireAndForget: true,
+      });
+
+      expect(result).toBeUndefined();
+      expect(mockFetch).toHaveBeenCalled();
+    });
+
+    it('dovrebbe gestire status code non OK senza errori in fire-and-forget', async () => {
+      const client = new HttpClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        headers: new Headers({ 'content-type': 'text/plain' }),
+        text: async () => 'Server error',
+      });
+
+      // Non deve lanciare errori
+      const result = await client.post('/webhook', {
+        body: { event: 'test' },
+        fireAndForget: true,
+      });
+
+      expect(result).toBeUndefined();
+    });
+
+    it('dovrebbe supportare fire-and-forget con GET', async () => {
+      const client = new HttpClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ data: 'value' }),
+      });
+
+      const result = await client.get('/track', {
+        query: { event: 'pageview' },
+        fireAndForget: true,
+      });
+
+      expect(result).toBeUndefined();
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/track?event=pageview',
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
+
+    it('dovrebbe completare immediatamente senza retry', async () => {
+      vi.clearAllMocks();
+      const client = new HttpClient({ maxRetries: 3 });
+
+      mockFetch.mockRejectedValue(new TypeError('Network error'));
+
+      const start = Date.now();
+      await client.post('/webhook', {
+        body: { event: 'test' },
+        fireAndForget: true,
+      });
+      const elapsed = Date.now() - start;
+
+      // Dovrebbe completare immediatamente (< 100ms) senza retry
+      expect(elapsed).toBeLessThan(100);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('EventBridge Use Cases', () => {
     it('dovrebbe gestire webhook Slack', async () => {
       const slackClient = new HttpClient({

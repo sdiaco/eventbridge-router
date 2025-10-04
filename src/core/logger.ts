@@ -1,4 +1,4 @@
-import { Logger } from '@/types/plugins';
+import { Logger } from '@/types/plugin';
 
 export interface LoggerOptions {
   level?: 'debug' | 'info' | 'warn' | 'error';
