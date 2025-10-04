@@ -1,7 +1,13 @@
 import type { IHttpClient } from './fetch';
 
+export enum PluginMode {
+  async,
+  sync
+} 
+
 export interface Plugin {
   name: string;
+  mode?: PluginMode;
   events?: string[] | ((eventName: string) => boolean);
   init?: (context: PluginContext) => Promise<void> | void;
   destroy?: () => Promise<void> | void;

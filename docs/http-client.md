@@ -83,6 +83,7 @@ interface RequestOptions {
   responseType?: 'json' | 'text';   // Default: auto-detect da content-type
   validateStatus?: (status: number) => boolean;  // Default: 200-299
   signal?: AbortSignal;             // Per cancellare la richiesta
+  fireAndForget?: boolean;          // Invia senza attendere risposta (no retry, no error)
 }
 ```
 
@@ -150,6 +151,29 @@ const webhookResponse = await client.post('/webhook', {
 await client.get('/endpoint', {
   validateStatus: (status) => status < 500  // considera 4xx come successo
 });
+```
+
+### Fire-and-Forget (Asincrono senza Risposta)
+
+```typescript
+// Invio notifica senza attendere risposta - utile per webhook/eventi
+await client.post('/webhook/notify', {
+  body: { event: 'order.created', orderId: 123 },
+  fireAndForget: true  // ritorna immediatamente, ignora errori
+});
+
+// Logging remoto senza bloccare esecuzione
+await client.post('/analytics/track', {
+  body: { action: 'page_view', url: '/home' },
+  fireAndForget: true
+});
+
+// Notifiche multiple in parallelo
+await Promise.all([
+  client.post('/slack/notify', { body: event, fireAndForget: true }),
+  client.post('/discord/notify', { body: event, fireAndForget: true }),
+  client.post('/analytics/log', { body: event, fireAndForget: true })
+]);
 ```
 
 ## Gestione Errori
@@ -250,6 +274,31 @@ const client = new HttpClient({
     return res.status === 429 || res.status >= 500;
   }
 });
+```
+
+### 5. Fire-and-forget per notifiche non critiche
+
+```typescript
+// Notifiche webhook che non devono bloccare il flusso eventi
+async function processEvent(event: Event) {
+  // Processa evento (critico)
+  await processOrder(event);
+
+  // Notifiche opzionali - fire-and-forget
+  await Promise.all([
+    slackClient.post('/webhook', {
+      body: { text: `Ordine ${event.id} processato` },
+      fireAndForget: true
+    }),
+    analyticsClient.post('/track', {
+      body: { event: 'order.processed', id: event.id },
+      fireAndForget: true
+    })
+  ]);
+
+  // Il flusso continua immediatamente, senza attendere webhook
+  return { success: true };
+}
 ```
 
 ## Metodi Disponibili

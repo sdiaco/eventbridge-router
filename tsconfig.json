@@ -13,6 +13,6 @@
     "strict": true,
     "skipLibCheck": true,
   },
-  "include": ["src/**/*", "plugins/**/*"],
+  "include": ["src/**/*", "plugins/**/*", "service/**/*"],
   "exclude": ["node_modules", "dist"]
 }

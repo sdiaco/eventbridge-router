@@ -17,6 +17,7 @@ export interface RequestOptions {
   responseType?: "json" | "text";  // EventBridge: JSON (API) o text (webhook response)
   validateStatus?: (status: number) => boolean;
   signal?: AbortSignal;
+  fireAndForget?: boolean;  // invia richiesta senza attendere risposta (no retry, no error handling)
 }
 
 export interface IHttpClient {

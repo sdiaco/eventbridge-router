@@ -1,24 +1,16 @@
-import { Plugin, PluginContext, PluginEvent } from "@/types/plugins";
+import { PluginContext, PluginEvent, PluginMode } from "@/types/plugin";
 import { SlackWebhookPayload } from "./types";
-import { HttpClient } from "@services/fetch";
+import { PluginBase } from "@/core/plugin-base";
 
-export class SlackNotifier implements Plugin {
+export class SlackNotifier extends PluginBase {
   name = 'slack-notifier';
-  events = ['user.created', 'order.placed']; // eventi da gestire
+  mode = PluginMode.async;
+  events = ['user.created', 'order.placed'];
   metadata = {
     version: '1.0.0',
     description: 'Sends slack notification on event received',
     owner: 'eventbridge-router',
   };
-
-  private client: HttpClient;
-
-  constructor() {
-    this.client = new HttpClient({
-      timeoutMs: 5000,
-      maxRetries: 2,
-    });
-  }
 
   async onEvent(event: PluginEvent, context: PluginContext): Promise<void> {
     const payload: SlackWebhookPayload = {
@@ -46,8 +38,9 @@ export class SlackNotifier implements Plugin {
       ],
     };
 
-    await this.client.post('***TEST***', {
+    await this.request('POST', 'xxx', {
       body: payload,
+      timeoutMs: 5000,
     });
 
   }

@@ -1,4 +1,4 @@
-import { Logger, MetricsCollector } from './plugins';
+import { Logger, MetricsCollector } from './plugin';
 import { IHttpClient } from './fetch';
 
 export interface PluginManagerOptions {
