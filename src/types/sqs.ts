@@ -1,4 +1,4 @@
-import type { Message, MessageAttributeValue } from '@aws-sdk/client-sqs';
+import type { Message, MessageAttributeValue, QueueAttributeName } from '@aws-sdk/client-sqs';
 
 export interface SendMessageParameters {
   QueueUrl: string;
@@ -23,7 +23,7 @@ export interface SendMessageBatchParameters {
 
 export interface ReceiveMessageParameters {
   QueueUrl: string;
-  AttributeNames?: string[];
+  AttributeNames?: QueueAttributeName[];
   MessageAttributeNames?: string[];
   MaxNumberOfMessages?: number;
   VisibilityTimeoutSeconds?: number;
