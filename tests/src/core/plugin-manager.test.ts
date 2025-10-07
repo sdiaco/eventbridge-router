@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PluginManager } from '@/core/plugin-manager';
-import { Plugin, PluginContext, PluginEvent, Logger, MetricsCollector } from '@/types/plugins';
+import { Plugin, PluginContext, PluginEvent, Logger } from '@/types/plugin';
 
 // Mock logger
 const createMockLogger = (): Logger => ({
@@ -9,13 +9,6 @@ const createMockLogger = (): Logger => ({
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn(),
-});
-
-// Mock metrics
-const createMockMetrics = (): MetricsCollector => ({
-  increment: vi.fn(),
-  gauge: vi.fn(),
-  timing: vi.fn(),
 });
 
 // Mock plugin factory
@@ -42,11 +35,9 @@ const createMockPlugin = (
 
 describe('PluginManager', () => {
   let logger: Logger;
-  let metrics: MetricsCollector;
 
   beforeEach(() => {
     logger = createMockLogger();
-    metrics = createMockMetrics();
     vi.clearAllMocks();
   });
 
@@ -100,7 +91,7 @@ describe('PluginManager', () => {
     });
 
     it('dovrebbe passare context corretto a init()', async () => {
-      const pm = new PluginManager({ logger, metrics });
+      const pm = new PluginManager({ logger });
       const plugin = createMockPlugin('test-plugin');
 
       pm.register(plugin);
@@ -111,7 +102,6 @@ describe('PluginManager', () => {
           emit: expect.any(Function),
           config: expect.any(Object),
           logger: logger,
-          metrics: metrics,
         })
       );
     });
@@ -230,10 +220,10 @@ describe('PluginManager', () => {
 
   describe('triggerEvent - Filtro Eventi', () => {
     it('dovrebbe eseguire solo plugin con events matching', async () => {
-      const pm = new PluginManager({ logger, metrics });
+      const pm = new PluginManager({ logger });
       const plugin1 = createMockPlugin('slack', ['user.created', 'order.placed']);
       const plugin2 = createMockPlugin('logger', ['user.created']);
-      const plugin3 = createMockPlugin('metrics', ['order.placed']);
+      const plugin3 = createMockPlugin('analytics', ['order.placed']);
 
       pm.registerAll([plugin1, plugin2, plugin3]);
       await pm.init();
@@ -336,20 +326,8 @@ describe('PluginManager', () => {
       expect(duration).toBeLessThan(100);
     });
 
-    it('dovrebbe tracciare metriche success', async () => {
-      const pm = new PluginManager({ logger, metrics });
-      const plugin = createMockPlugin('test-plugin', ['test.event']);
-
-      pm.register(plugin);
-      await pm.init();
-
-      await pm.triggerEvent({ name: 'test.event', source: 'test', data: {} });
-
-      expect(metrics.increment).toHaveBeenCalledWith('plugin.test-plugin.events.success');
-    });
-
     it('dovrebbe gestire errore e chiamare onError', async () => {
-      const pm = new PluginManager({ logger, metrics });
+      const pm = new PluginManager({ logger });
       const testError = new Error('Plugin error');
       const plugin = createMockPlugin('failing-plugin', ['test.event'], {
         onEvent: vi.fn().mockRejectedValue(testError),
@@ -364,7 +342,6 @@ describe('PluginManager', () => {
         'Plugin "failing-plugin" failed on event:',
         testError
       );
-      expect(metrics.increment).toHaveBeenCalledWith('plugin.failing-plugin.events.error');
       expect(plugin.onError).toHaveBeenCalledWith(
         testError,
         expect.any(Object),
@@ -417,7 +394,7 @@ describe('PluginManager', () => {
 
   describe('triggerReplay', () => {
     it('dovrebbe eseguire onReplay sui plugin filtrati', async () => {
-      const pm = new PluginManager({ logger, metrics });
+      const pm = new PluginManager({ logger });
       const plugin = createMockPlugin('test-plugin', ['replay.event']);
 
       pm.register(plugin);
@@ -426,11 +403,10 @@ describe('PluginManager', () => {
       await pm.triggerReplay({ name: 'replay.event', source: 'test', data: {} });
 
       expect(plugin.onReplay).toHaveBeenCalled();
-      expect(metrics.increment).toHaveBeenCalledWith('plugin.test-plugin.replay.success');
     });
 
     it('dovrebbe gestire errori in onReplay', async () => {
-      const pm = new PluginManager({ logger, metrics });
+      const pm = new PluginManager({ logger });
       const plugin = createMockPlugin('failing', ['test'], {
         onReplay: vi.fn().mockRejectedValue(new Error('Replay failed')),
       });
@@ -444,13 +420,12 @@ describe('PluginManager', () => {
         'Plugin "failing" failed on replay:',
         expect.any(Error)
       );
-      expect(metrics.increment).toHaveBeenCalledWith('plugin.failing.replay.error');
     });
   });
 
   describe('triggerDLQ', () => {
     it('dovrebbe eseguire onDLQ sui plugin filtrati', async () => {
-      const pm = new PluginManager({ logger, metrics });
+      const pm = new PluginManager({ logger });
       const plugin = createMockPlugin('test-plugin', ['dlq.event']);
 
       pm.register(plugin);
@@ -459,11 +434,10 @@ describe('PluginManager', () => {
       await pm.triggerDLQ({ name: 'dlq.event', source: 'test', data: {} });
 
       expect(plugin.onDLQ).toHaveBeenCalled();
-      expect(metrics.increment).toHaveBeenCalledWith('plugin.test-plugin.dlq.success');
     });
 
     it('dovrebbe gestire errori in onDLQ', async () => {
-      const pm = new PluginManager({ logger, metrics });
+      const pm = new PluginManager({ logger });
       const plugin = createMockPlugin('failing', ['test'], {
         onDLQ: vi.fn().mockRejectedValue(new Error('DLQ failed')),
       });
@@ -477,7 +451,6 @@ describe('PluginManager', () => {
         'Plugin "failing" failed on DLQ:',
         expect.any(Error)
       );
-      expect(metrics.increment).toHaveBeenCalledWith('plugin.failing.dlq.error');
     });
   });
 
