@@ -31,7 +31,6 @@
     "serverless": "^3.38.0",
     "serverless-esbuild": "^1.55.1",
     "serverless-offline": "^13.3.3",
-    "serverless-plugin-typescript": "^2.1.5",
     "serverless-prune-plugin": "^2.0.2",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3",
