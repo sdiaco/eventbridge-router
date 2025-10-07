@@ -46,6 +46,7 @@ provider:
             - sqs:DeleteMessage
             - sqs:GetQueueAttributes
             - sqs:ChangeMessageVisibility
+            - sqs:SendMessage
           Resource: !GetAtt PrimaryQueue.Arn
 
         - Effect: Allow
@@ -135,7 +136,7 @@ functions:
   consumer:
     handler: src/handlers/consumer.handler
     timeout: 300  # 5 minutes
-    memorySize: 1024
+    memorySize: 512
     events:
       - sqs:
           arn: !GetAtt PrimaryQueue.Arn
@@ -149,7 +150,7 @@ functions:
   ingestionHttp:
     handler: src/handlers/ingestion-http.handler
     timeout: 15
-    memorySize: 256
+    memorySize: 128
     events:
       - httpApi:
           path: /events
@@ -159,7 +160,7 @@ functions:
   ingestionEventBridge:
     handler: src/handlers/ingestion-eventbridge.handler
     timeout: 30
-    memorySize: 256
+    memorySize: 128
     events:
       - eventBridge:
           pattern:
