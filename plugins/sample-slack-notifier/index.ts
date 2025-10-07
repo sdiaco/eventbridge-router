@@ -3,7 +3,7 @@ import { SlackWebhookPayload } from "./types";
 import { PluginBase } from "@/core/plugin-base";
 
 export class SlackNotifier extends PluginBase {
-  name = 'slack-notifier';
+  name = 'sample-slack-notifier';
   mode = PluginMode.async;
   events = ['test.slack.notify'];
   metadata = {
@@ -38,7 +38,7 @@ export class SlackNotifier extends PluginBase {
       ],
     };
 
-    await this.request('POST', 'https://hooks.slack.com/services/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', {
+    await this.request('POST', process.env.PLUGIN_SLACK_WEBHOOK, {
       body: payload,
       timeoutMs: 5000,
     });

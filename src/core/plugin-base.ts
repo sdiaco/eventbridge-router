@@ -30,9 +30,11 @@ export class PluginBase implements Plugin {
    */
   protected async request<T = unknown>(
     method: HttpMethod,
-    url: string,
+    url: string | undefined,
     options?: RequestOptions
   ): Promise<T | undefined> {
+    if (!url) return undefined;
+
     this.ensureHttpClient();
 
     const isAsync = this.mode === PluginMode.async;
