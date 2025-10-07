@@ -9,7 +9,7 @@ Sistema serverless AWS per il processing asincrono di eventi attraverso un'archi
 
 ## Panoramica
 
-EventBridge Router riceve eventi da multiple sorgenti (API Gateway, EventBridge), li mette in coda SQS e li processa attraverso plugin personalizzabili. Sistema ottimizzato per costi bassi (~$10-15/mese per 1M eventi) e latenza ridotta (max 5 secondi).
+EventBridge Router riceve eventi da multiple sorgenti (API Gateway, EventBridge), li mette in coda SQS e li processa attraverso plugin personalizzabili. Sistema ottimizzato per costi bassi (~$10-15/mese per 1M eventi) e latenza ridotta.
 
 ```
 ┌─────────────┐
@@ -42,7 +42,7 @@ EventBridge Router riceve eventi da multiple sorgenti (API Gateway, EventBridge)
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/eventbridge-router.git
+git clone https://github.com/sdiaco/eventbridge-router.git
 cd eventbridge-router
 
 # Installa dipendenze
