@@ -117,6 +117,7 @@ custom:
     # plugins: ./esbuild.plugins.cjs
 
 plugins:
+  - serverless-dotenv-plugin
   - serverless-esbuild
   - serverless-prune-plugin
 
@@ -134,7 +135,7 @@ functions:
       - sqs:
           arn: !GetAtt PrimaryQueue.Arn
           batchSize: ${self:custom.sqsBatchSize.${self:provider.stage}}
-          maximumBatchingWindowInSeconds: ${self:custom.sqsBatchWindow.${self:provider.stage}}
+          maximumBatchingWindow: ${self:custom.sqsBatchWindow.${self:provider.stage}}
           functionResponseType: ReportBatchItemFailures
     environment:
       PLUGIN_CONFIG_PATH: ${env:PLUGIN_CONFIG_PATH, ''}

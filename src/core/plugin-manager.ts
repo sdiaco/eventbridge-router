@@ -116,13 +116,13 @@ export class PluginManager {
 
         const context = this.createContext(plugin.name);
         try {
-          await hook(event, context);
+          await hook.call(plugin, event, context);
         } catch (err) {
           this.logger.error(`Plugin "${plugin.name}" failed ${strategy.errorContext}:`, err);
 
           if (plugin.onError) {
             try {
-              await plugin.onError(err as Error, event, context);
+              await plugin.onError.call(plugin, err as Error, event, context);
             } catch (onErrorErr) {
               this.logger.error(`Plugin "${plugin.name}" onError handler failed:`, onErrorErr);
             }

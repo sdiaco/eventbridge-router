@@ -30,6 +30,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.6.2",
     "serverless": "^3.38.0",
+    "serverless-dotenv-plugin": "^6.0.0",
     "serverless-esbuild": "^1.55.1",
     "serverless-prune-plugin": "^2.0.2",
     "tsc-alias": "^1.8.16",

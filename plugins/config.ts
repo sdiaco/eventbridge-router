@@ -1,5 +1,5 @@
 import { Plugin } from "@/types/plugin";
-import { SlackNotifier } from "./slack-notifier";
+import { SlackNotifier } from "./sample-slack-notifier";
 
 const plugins: Plugin[] = [
   new SlackNotifier(),
