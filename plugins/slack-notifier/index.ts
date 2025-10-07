@@ -5,7 +5,7 @@ import { PluginBase } from "@/core/plugin-base";
 export class SlackNotifier extends PluginBase {
   name = 'slack-notifier';
   mode = PluginMode.async;
-  events = ['user.created', 'order.placed'];
+  events = ['test.slack.notify'];
   metadata = {
     version: '1.0.0',
     description: 'Sends slack notification on event received',
@@ -38,7 +38,7 @@ export class SlackNotifier extends PluginBase {
       ],
     };
 
-    await this.request('POST', 'xxx', {
+    await this.request('POST', '***TEST***', {
       body: payload,
       timeoutMs: 5000,
     });

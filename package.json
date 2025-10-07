@@ -13,7 +13,7 @@
     "deploy": "serverless deploy",
     "deploy:dev": "serverless deploy --stage dev",
     "deploy:prod": "serverless deploy --stage prod",
-    "remove": "serverless remove",
+    "delete": "serverless remove",
     "logs": "serverless logs -f consumer --tail",
     "info": "serverless info"
   },
