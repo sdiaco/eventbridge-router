@@ -54,4 +54,5 @@ export interface PluginEvent<T = unknown> {
   source: string;
   data: T;
   timestamp?: Date;
+  attributes?: Record<string, unknown>;
 }

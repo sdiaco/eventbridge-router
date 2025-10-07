@@ -207,7 +207,14 @@ export class EventRouter {
     const results = await Promise.allSettled(
       groups.map(async ({ event, plugins }) => {
         try {
-          await this.pluginManager.triggerEvent(event, plugins);
+          // Check if event is a replay
+          const isReplay = event.attributes?.isReplay === true;
+
+          if (isReplay) {
+            await this.pluginManager.triggerReplay(event, plugins);
+          } else {
+            await this.pluginManager.triggerEvent(event, plugins);
+          }
         } catch (error) {
           const errorObj = error instanceof Error ? error : new Error(String(error));
           errors.set(event.id || event.name, errorObj);
@@ -245,7 +252,14 @@ export class EventRouter {
     const results = await Promise.allSettled(
       sync.inline.map(async ({ event, plugins }) => {
         try {
-          await this.pluginManager.triggerEvent(event, plugins);
+          // Check if event is a replay
+          const isReplay = event.attributes?.isReplay === true;
+
+          if (isReplay) {
+            await this.pluginManager.triggerReplay(event, plugins);
+          } else {
+            await this.pluginManager.triggerEvent(event, plugins);
+          }
         } catch (error) {
           const errorObj = error instanceof Error ? error : new Error(String(error));
           errors.set(event.id || event.name, errorObj);
@@ -344,6 +358,17 @@ export class EventRouter {
       });
 
       this.logger.info(`Sent ${failedEvents.length} failed events to DLQ`);
+
+      // Trigger onDLQ hook per ogni evento fallito
+      await Promise.allSettled(
+        failedEvents.map(async (event) => {
+          try {
+            await this.pluginManager.triggerDLQ(event);
+          } catch (error) {
+            this.logger.error(`Failed to trigger onDLQ for event ${event.id}:`, error);
+          }
+        })
+      );
     } catch (error) {
       this.logger.error(`Failed to send events to DLQ:`, error);
       // Non re-throw: DLQ failure non deve bloccare il batch
