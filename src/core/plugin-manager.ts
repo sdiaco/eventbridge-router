@@ -112,7 +112,12 @@ export class PluginManager {
 
     await Promise.allSettled(
       targets.map(async plugin => {
-        const hook = plugin[strategy.hookName];
+        // Fallback: se onReplay non esiste, usa onEvent
+        let hook = plugin[strategy.hookName];
+        if (!hook && strategy.hookName === 'onReplay') {
+          hook = plugin.onEvent;
+        }
+
         if (!hook) return;
 
         const context = this.createContext(plugin.name);
