@@ -1,0 +1,36 @@
+{
+  "Records": [
+    {
+      "messageId": "059f36b4-87a3-44ab-83d2-661975830a7d",
+      "receiptHandle": "AQEBwJnKyrHigUMZj6rYigCgxlaS3SLy0a...",
+      "body": "{\"name\":\"test.slack.notify\",\"source\":\"test\",\"data\":{\"userId\":\"user_001\",\"email\":\"john.doe@example.com\",\"name\":\"John Doe\"}}",
+      "attributes": {
+        "ApproximateReceiveCount": "1",
+        "SentTimestamp": "1728297000000",
+        "SenderId": "AIDAIT2UOQQY3AUEKVGXU",
+        "ApproximateFirstReceiveTimestamp": "1728297000000"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "e4e68fb7bd0e697a0ae8f1bb342846b3",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:eu-west-1:123456789012:eventbridge-router-primary-dev",
+      "awsRegion": "eu-west-1"
+    },
+    {
+      "messageId": "2de9f1b5-12c4-55de-94f3-772086941b8e",
+      "receiptHandle": "AQEBzKmLzsIjhVNak7sTjhDhymbT4TMz1b...",
+      "body": "{\"name\":\"test.order.completed\",\"source\":\"checkout\",\"data\":{\"orderId\":\"ord_456\",\"amount\":99.99,\"items\":[{\"productId\":\"prod_123\",\"quantity\":2}]}}",
+      "attributes": {
+        "ApproximateReceiveCount": "1",
+        "SentTimestamp": "1728297060000",
+        "SenderId": "AIDAIT2UOQQY3AUEKVGXU",
+        "ApproximateFirstReceiveTimestamp": "1728297060000"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "f5f79gc8ce1f708b1bf9g2cc453957c4",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:eu-west-1:123456789012:eventbridge-router-primary-dev",
+      "awsRegion": "eu-west-1"
+    }
+  ]
+}

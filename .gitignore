@@ -8,6 +8,8 @@ yarn-error.log*
 dist/
 build/
 *.tsbuildinfo
+.serverless
+.esbuild
 
 # Logs
 logs
@@ -25,6 +27,19 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+*.tfvars
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars.backup
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 # AWS SAM / CDK / Terraform artifacts
 .aws-sam/
@@ -44,3 +59,5 @@ coverage/
 .nyc_output/
 .jest-cache/
 .jest/
+___*
+terraform/*
