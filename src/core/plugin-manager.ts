@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, PluginEvent, Logger, MetricsCollector } from '@/types/plugin';
+import { Plugin, PluginContext, PluginEvent, Logger } from '@/types/plugin';
 import { IHttpClient } from '@/types/fetch';
 import { PluginManagerOptions } from '@/types/plugin-manager';
 
@@ -6,14 +6,12 @@ export class PluginManager {
   private plugins: Map<string, Plugin> = new Map();
   private logger: Logger;
   private http?: IHttpClient;
-  private metrics?: MetricsCollector;
   private config: Record<string, Record<string, unknown>>;
   private initialized = false;
 
   constructor(options: PluginManagerOptions) {
     this.logger = options.logger;
     this.http = options.http;
-    this.metrics = options.metrics;
     this.config = options.config || {};
   }
 
@@ -70,7 +68,6 @@ export class PluginManager {
   async triggerEvent(event: PluginEvent, pluginNames?: string[]): Promise<void> {
     await this.executeHook(event, pluginNames, {
       hookName: 'onEvent',
-      metricsPrefix: 'events',
       errorContext: 'on event'
     });
   }
@@ -78,7 +75,6 @@ export class PluginManager {
   async triggerReplay(event: PluginEvent, pluginNames?: string[]): Promise<void> {
     await this.executeHook(event, pluginNames, {
       hookName: 'onReplay',
-      metricsPrefix: 'replay',
       errorContext: 'on replay'
     });
   }
@@ -86,7 +82,6 @@ export class PluginManager {
   async triggerDLQ(event: PluginEvent, pluginNames?: string[]): Promise<void> {
     await this.executeHook(event, pluginNames, {
       hookName: 'onDLQ',
-      metricsPrefix: 'dlq',
       errorContext: 'on DLQ'
     });
   }
@@ -96,7 +91,6 @@ export class PluginManager {
     pluginNames: string[] | undefined,
     strategy: {
       hookName: 'onEvent' | 'onReplay' | 'onDLQ';
-      metricsPrefix: string;
       errorContext: string;
     }
   ): Promise<void> {
@@ -123,10 +117,8 @@ export class PluginManager {
         const context = this.createContext(plugin.name);
         try {
           await hook(event, context);
-          this.metrics?.increment(`plugin.${plugin.name}.${strategy.metricsPrefix}.success`);
         } catch (err) {
           this.logger.error(`Plugin "${plugin.name}" failed ${strategy.errorContext}:`, err);
-          this.metrics?.increment(`plugin.${plugin.name}.${strategy.metricsPrefix}.error`);
 
           if (plugin.onError) {
             try {
@@ -161,7 +153,6 @@ export class PluginManager {
       config: this.config[pluginName] || {},
       logger: this.logger,
       http: this.http,
-      metrics: this.metrics,
     };
   }
 

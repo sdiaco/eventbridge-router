@@ -1,0 +1,309 @@
+service: eventbridge-router
+
+frameworkVersion: '^3.0.0'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  architecture: arm64
+  region: ${opt:region, 'eu-west-1'}
+  stage: ${opt:stage, 'dev'}
+
+  logRetentionInDays: ${self:custom.logRetention.${self:provider.stage}, 14}
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    PRIMARY_QUEUE_URL: !Ref PrimaryQueue
+    DLQ_URL: !Ref DeadLetterQueue
+    EVENTS_TABLE: !Ref EventsTable
+    LOG_LEVEL: ${self:custom.logLevel.${self:provider.stage}, 'info'}
+
+  iam:
+    role:
+      statements:
+        # SQS permissions
+        - Effect: Allow
+          Action:
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+            - sqs:ChangeMessageVisibility
+          Resource: !GetAtt PrimaryQueue.Arn
+
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+          Resource: !GetAtt DeadLetterQueue.Arn
+
+        # DynamoDB permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - !GetAtt EventsTable.Arn
+            - !Sub '${EventsTable.Arn}/index/*'
+
+        # EventBridge permissions (per plugin asincroni)
+        - Effect: Allow
+          Action:
+            - events:PutEvents
+          Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default'
+
+        # CloudWatch Logs
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*'
+
+custom:
+  # Log levels per stage
+  logLevel:
+    dev: info
+    prod: info
+  logRetention:
+    dev: 7
+    prod: 30
+
+  # Prune old Lambda versions
+  prune:
+    automatic: true
+    number: 3
+
+  # TypeScript plugin config
+  serverless-plugin-typescript:
+    tsConfigFileLocation: './tsconfig.json'
+
+  # SQS batch configuration
+  sqsBatchSize:
+    dev: 10
+    prod: 50
+  sqsBatchWindow:
+    dev: 10
+    prod: 20
+
+  sqsVisibilityTimeout:
+    dev: 300
+    prod: 300
+
+  # DynamoDB TTL (30 days)
+  ttlDays: 30
+
+  # Serverless Offline config
+  serverless-offline:
+    httpPort: 3000
+    lambdaPort: 3002
+
+  esbuild:
+    bundle: true
+    minify: true
+    target: node20
+    platform: node
+    tsconfig: ./tsconfig.json
+    tsconfigPaths: true 
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-prune-plugin
+  - serverless-esbuild
+  - serverless-offline
+
+package:
+  individually: true
+  excludeDevDependencies: true
+  exclude:
+    - .vscode/**
+    - .git/**
+    - .github/**
+    - .idea/**
+    - node_modules/**
+    - tests/**
+    - docs/**
+    - coverage/**
+    - .nyc_output/**
+    - README.md
+    - .env
+    - .DS_Store
+    - .eslint*
+    - .prettier*
+    - tsconfig.json
+    - vitest.config.ts
+    - yarn.lock
+  include:
+    - dist/**
+
+functions:
+  # SQS Consumer - processa eventi dalla coda
+  consumer:
+    handler: src/handlers/consumer.handler
+    timeout: 300  # 5 minutes
+    memorySize: 1024
+    events:
+      - sqs:
+          arn: !GetAtt PrimaryQueue.Arn
+          batchSize: ${self:custom.sqsBatchSize.${self:provider.stage}}
+          maximumBatchingWindowInSeconds: 5
+          functionResponseType: ReportBatchItemFailures
+    environment:
+      PLUGIN_CONFIG_PATH: ${env:PLUGIN_CONFIG_PATH, ''}
+
+  # HTTP Ingestion - riceve 1 evento da API Gateway e lo mette in coda
+  ingestionHttp:
+    handler: src/handlers/ingestion-http.handler
+    timeout: 15
+    memorySize: 256
+    events:
+      - httpApi:
+          path: /events
+          method: post
+          cors: true
+
+  # EventBridge Ingestion - riceve eventi da EventBridge e li mette in coda
+  ingestionEventBridge:
+    handler: src/handlers/ingestion-eventbridge.handler
+    timeout: 30
+    memorySize: 256
+    events:
+      - eventBridge:
+          pattern:
+            source:
+              - custom.events
+
+resources:
+  Conditions:
+    IsProd: !Equals [ ${self:provider.stage}, 'prod' ]
+
+  Resources:
+    # SQS Primary Queue (Standard queue per ridurre costi)
+    PrimaryQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-primary-${self:provider.stage}
+        VisibilityTimeout: ${self:custom.sqsVisibilityTimeout.${self:provider.stage}}
+        MessageRetentionPeriod: 1209600  # 14 days
+        ReceiveMessageWaitTimeSeconds: 20  # Long polling
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
+          maxReceiveCount: 3
+        Tags:
+          - Key: Service
+            Value: ${self:service}
+          - Key: Stage
+            Value: ${self:provider.stage}
+
+    # Dead Letter Queue
+    DeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-dlq-${self:provider.stage}
+        MessageRetentionPeriod: 1209600  # 14 days
+        Tags:
+          - Key: Service
+            Value: ${self:service}
+          - Key: Stage
+            Value: ${self:provider.stage}
+
+    # DynamoDB Events Table
+    EventsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-events-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST  # On-demand
+        AttributeDefinitions:
+          - AttributeName: eventId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: eventId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+        SSESpecification:
+          SSEEnabled: true
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: false
+        Tags:
+          - Key: Service
+            Value: ${self:service}
+          - Key: Stage
+            Value: ${self:provider.stage}
+
+    # CloudWatch Alarms - DLQ
+    DLQAlarm:
+      Condition: IsProd
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: ${self:service}-dlq-messages-${self:provider.stage}
+        AlarmDescription: Alert when messages arrive in DLQ
+        MetricName: ApproximateNumberOfMessagesVisible
+        Namespace: AWS/SQS
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        Dimensions:
+          - Name: QueueName
+            Value: !GetAtt DeadLetterQueue.QueueName
+        TreatMissingData: notBreaching
+
+    # CloudWatch Alarms - Lambda Errors
+    ConsumerErrorAlarm:
+      Condition: IsProd
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: ${self:service}-consumer-errors-${self:provider.stage}
+        AlarmDescription: Alert on Lambda errors
+        MetricName: Errors
+        Namespace: AWS/Lambda
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 5
+        ComparisonOperator: GreaterThanThreshold
+        Dimensions:
+          - Name: FunctionName
+            Value: !Ref ConsumerLambdaFunction
+        TreatMissingData: notBreaching
+
+  Outputs:
+    PrimaryQueueUrl:
+      Description: Primary SQS Queue URL
+      Value: !Ref PrimaryQueue
+      Export:
+        Name: ${self:service}-primary-queue-url-${self:provider.stage}
+
+    PrimaryQueueArn:
+      Description: Primary SQS Queue ARN
+      Value: !GetAtt PrimaryQueue.Arn
+      Export:
+        Name: ${self:service}-primary-queue-arn-${self:provider.stage}
+
+    DLQUrl:
+      Description: Dead Letter Queue URL
+      Value: !Ref DeadLetterQueue
+      Export:
+        Name: ${self:service}-dlq-url-${self:provider.stage}
+
+    EventsTableName:
+      Description: DynamoDB Events Table Name
+      Value: !Ref EventsTable
+      Export:
+        Name: ${self:service}-events-table-${self:provider.stage}
+
+    EventsTableArn:
+      Description: DynamoDB Events Table ARN
+      Value: !GetAtt EventsTable.Arn
+      Export:
+        Name: ${self:service}-events-table-arn-${self:provider.stage}
+
+    ApiEndpoint:
+      Description: API Gateway Endpoint
+      Value: !Sub 'https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}'
+      Export:
+        Name: ${self:service}-api-endpoint-${self:provider.stage}
