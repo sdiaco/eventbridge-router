@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { handler } from '@/handlers/ingestion-http';
-import * as sqsService from '@/services/sqs';
+import { sendMessage } from '@/services/sqs';
 
 vi.mock('@/services/sqs');
 
@@ -101,7 +101,7 @@ describe('Ingestion HTTP Handler', () => {
 
   describe('Event Processing', () => {
     it('should queue single event to SQS', async () => {
-      vi.spyOn(sqsService, 'sendMessageBatch').mockResolvedValue(undefined);
+      vi.mocked(sendMessage).mockResolvedValue(undefined);
 
       const event = createMockEvent(
         JSON.stringify({
@@ -118,23 +118,18 @@ describe('Ingestion HTTP Handler', () => {
         message: 'Event queued successfully',
       });
 
-      expect(sqsService.sendMessageBatch).toHaveBeenCalledWith({
+      expect(sendMessage).toHaveBeenCalledWith({
         QueueUrl: 'https://sqs.eu-west-1.amazonaws.com/123/test-queue',
-        Entries: [
-          {
-            Id: '0',
-            MessageBody: JSON.stringify({
-              name: 'user.created',
-              source: 'api',
-              data: { userId: 123 },
-            }),
-          },
-        ],
+        MessageBody: JSON.stringify({
+          name: 'user.created',
+          source: 'api',
+          data: { userId: 123 },
+        }),
       });
     });
 
     it('should return 500 if SQS fails', async () => {
-      vi.spyOn(sqsService, 'sendMessageBatch').mockRejectedValue(new Error('SQS Error'));
+      vi.mocked(sendMessage).mockRejectedValue(new Error('SQS Error'));
 
       const event = createMockEvent(
         JSON.stringify({

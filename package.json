@@ -2,6 +2,7 @@
   "name": "eventbridge-router",
   "version": "1.0.0",
   "scripts": {
+    "invoke:consumer": "npx sls invoke local -f consumer",
     "build": "tsc && tsc-alias",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -30,7 +31,6 @@
     "prettier": "^3.6.2",
     "serverless": "^3.38.0",
     "serverless-esbuild": "^1.55.1",
-    "serverless-offline": "^13.3.3",
     "serverless-prune-plugin": "^2.0.2",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3",
