@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { sendMessageBatch } from '@/services/sqs';
+import { sendMessage } from '@/services/sqs';
 import { PluginEvent } from '@/types/plugin';
 
 /**
@@ -53,14 +53,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
   try {
     // Invia singolo evento a SQS
-    await sendMessageBatch({
+    await sendMessage({
       QueueUrl: queueUrl,
-      Entries: [
-        {
-          Id: '0',
-          MessageBody: JSON.stringify(pluginEvent),
-        },
-      ],
+      MessageBody: JSON.stringify(pluginEvent),
     });
 
     console.log(`Successfully queued event to SQS`);
