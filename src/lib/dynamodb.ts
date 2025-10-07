@@ -6,6 +6,7 @@ import {
   QueryCommand,
   UpdateCommand,
   DeleteCommand,
+  BatchGetCommand,
 } from '@aws-sdk/lib-dynamodb';
 
 interface DynamoDBService {
@@ -17,6 +18,7 @@ interface DynamoDBService {
     QueryCommand: typeof QueryCommand;
     UpdateCommand: typeof UpdateCommand;
     DeleteCommand: typeof DeleteCommand;
+    BatchGetCommand: typeof BatchGetCommand;
   };
 }
 
@@ -32,6 +34,7 @@ const dynamoDBService: DynamoDBService = {
     QueryCommand,
     UpdateCommand,
     DeleteCommand,
+    BatchGetCommand,
   },
 };
 

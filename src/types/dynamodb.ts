@@ -44,3 +44,8 @@ export interface UpdateEventStatusParameters {
   status: 'processed' | 'failed' | 'replayed';
   retryCount?: number;
 }
+
+export interface BatchCheckDuplicatesParameters {
+  tableName: string;
+  eventIds: string[];
+}

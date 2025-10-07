@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { checkDuplicate, storeEvent, queryEvents, updateEventStatus } from '@/services/dynamodb';
-import type { CheckDuplicateParameters, StoreEventParameters, QueryEventsParameters, UpdateEventStatusParameters } from '@/types/dynamodb';
+import { checkDuplicate, batchCheckDuplicates, storeEvent, queryEvents, updateEventStatus } from '@/services/dynamodb';
+import type { CheckDuplicateParameters, BatchCheckDuplicatesParameters, StoreEventParameters, QueryEventsParameters, UpdateEventStatusParameters } from '@/types/dynamodb';
 
 // Mock del modulo lib/dynamodb
 const mockSend = vi.fn();
@@ -16,6 +16,7 @@ vi.mock('@/lib/dynamodb', () => {
         GetCommand: vi.fn(),
         QueryCommand: vi.fn(),
         UpdateCommand: vi.fn(),
+        BatchGetCommand: vi.fn(),
       },
     },
   };
@@ -74,6 +75,198 @@ describe('DynamoDB Service', () => {
       mockSend.mockRejectedValueOnce(new Error('DynamoDB Error'));
 
       await expect(checkDuplicate(params)).rejects.toThrow('DynamoDB Error');
+    });
+  });
+
+  describe('batchCheckDuplicates', () => {
+    it('should return empty set for empty array', async () => {
+      const params: BatchCheckDuplicatesParameters = {
+        tableName: 'EventsTable',
+        eventIds: [],
+      };
+
+      const duplicates = await batchCheckDuplicates(params);
+
+      expect(duplicates.size).toBe(0);
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('should return duplicate for single existing ID', async () => {
+      const params: BatchCheckDuplicatesParameters = {
+        tableName: 'EventsTable',
+        eventIds: ['event-1'],
+      };
+
+      mockSend.mockResolvedValueOnce({
+        Responses: {
+          EventsTable: [{ eventId: 'event-1', timestamp: '2024-01-01T00:00:00Z' }],
+        },
+      });
+
+      const duplicates = await batchCheckDuplicates(params);
+
+      expect(duplicates.size).toBe(1);
+      expect(duplicates.has('event-1')).toBe(true);
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return empty set for single non-existing ID', async () => {
+      const params: BatchCheckDuplicatesParameters = {
+        tableName: 'EventsTable',
+        eventIds: ['event-1'],
+      };
+
+      mockSend.mockResolvedValueOnce({
+        Responses: {
+          EventsTable: [],
+        },
+      });
+
+      const duplicates = await batchCheckDuplicates(params);
+
+      expect(duplicates.size).toBe(0);
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return only existing IDs when multiple IDs provided', async () => {
+      const params: BatchCheckDuplicatesParameters = {
+        tableName: 'EventsTable',
+        eventIds: ['event-1', 'event-2', 'event-3'],
+      };
+
+      mockSend.mockResolvedValueOnce({
+        Responses: {
+          EventsTable: [
+            { eventId: 'event-1', timestamp: '2024-01-01T00:00:00Z' },
+            { eventId: 'event-3', timestamp: '2024-01-01T00:00:00Z' },
+          ],
+        },
+      });
+
+      const duplicates = await batchCheckDuplicates(params);
+
+      expect(duplicates.size).toBe(2);
+      expect(duplicates.has('event-1')).toBe(true);
+      expect(duplicates.has('event-2')).toBe(false);
+      expect(duplicates.has('event-3')).toBe(true);
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle large batch (>100 items) by splitting into multiple requests', async () => {
+      const eventIds = Array.from({ length: 150 }, (_, i) => `event-${i}`);
+      const params: BatchCheckDuplicatesParameters = {
+        tableName: 'EventsTable',
+        eventIds,
+      };
+
+      // First batch (100 items)
+      mockSend.mockResolvedValueOnce({
+        Responses: {
+          EventsTable: Array.from({ length: 50 }, (_, i) => ({
+            eventId: `event-${i}`,
+            timestamp: '2024-01-01T00:00:00Z',
+          })),
+        },
+      });
+
+      // Second batch (50 items)
+      mockSend.mockResolvedValueOnce({
+        Responses: {
+          EventsTable: Array.from({ length: 25 }, (_, i) => ({
+            eventId: `event-${i + 100}`,
+            timestamp: '2024-01-01T00:00:00Z',
+          })),
+        },
+      });
+
+      const duplicates = await batchCheckDuplicates(params);
+
+      expect(duplicates.size).toBe(75);
+      expect(mockSend).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle UnprocessedKeys by falling back to individual checks', async () => {
+      const params: BatchCheckDuplicatesParameters = {
+        tableName: 'EventsTable',
+        eventIds: ['event-1', 'event-2', 'event-3'],
+      };
+
+      // BatchGetCommand with UnprocessedKeys
+      mockSend.mockResolvedValueOnce({
+        Responses: {
+          EventsTable: [{ eventId: 'event-1', timestamp: '2024-01-01T00:00:00Z' }],
+        },
+        UnprocessedKeys: {
+          EventsTable: {
+            Keys: [{ eventId: 'event-2' }, { eventId: 'event-3' }],
+          },
+        },
+      });
+
+      // Individual GetCommand for event-2
+      mockSend.mockResolvedValueOnce({
+        Item: { eventId: 'event-2', timestamp: '2024-01-01T00:00:00Z' },
+      });
+
+      // Individual GetCommand for event-3
+      mockSend.mockResolvedValueOnce({ Item: undefined });
+
+      const duplicates = await batchCheckDuplicates(params);
+
+      expect(duplicates.size).toBe(2);
+      expect(duplicates.has('event-1')).toBe(true);
+      expect(duplicates.has('event-2')).toBe(true);
+      expect(duplicates.has('event-3')).toBe(false);
+      expect(mockSend).toHaveBeenCalledTimes(3);
+    });
+
+    it('should fallback to individual checks on BatchGetCommand error', async () => {
+      const params: BatchCheckDuplicatesParameters = {
+        tableName: 'EventsTable',
+        eventIds: ['event-1', 'event-2'],
+      };
+
+      // BatchGetCommand fails
+      mockSend.mockRejectedValueOnce(new Error('DynamoDB BatchGet Error'));
+
+      // Individual GetCommand for event-1
+      mockSend.mockResolvedValueOnce({
+        Item: { eventId: 'event-1', timestamp: '2024-01-01T00:00:00Z' },
+      });
+
+      // Individual GetCommand for event-2
+      mockSend.mockResolvedValueOnce({ Item: undefined });
+
+      const duplicates = await batchCheckDuplicates(params);
+
+      expect(duplicates.size).toBe(1);
+      expect(duplicates.has('event-1')).toBe(true);
+      expect(duplicates.has('event-2')).toBe(false);
+      expect(mockSend).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle individual check errors gracefully', async () => {
+      const params: BatchCheckDuplicatesParameters = {
+        tableName: 'EventsTable',
+        eventIds: ['event-1', 'event-2'],
+      };
+
+      // BatchGetCommand fails
+      mockSend.mockRejectedValueOnce(new Error('DynamoDB BatchGet Error'));
+
+      // Individual GetCommand for event-1 succeeds
+      mockSend.mockResolvedValueOnce({
+        Item: { eventId: 'event-1', timestamp: '2024-01-01T00:00:00Z' },
+      });
+
+      // Individual GetCommand for event-2 fails
+      mockSend.mockRejectedValueOnce(new Error('Individual check error'));
+
+      const duplicates = await batchCheckDuplicates(params);
+
+      expect(duplicates.size).toBe(1);
+      expect(duplicates.has('event-1')).toBe(true);
+      expect(mockSend).toHaveBeenCalledTimes(3);
     });
   });
 
