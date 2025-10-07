@@ -442,19 +442,19 @@ const pluginManager = new PluginManager({
 
 ## Best Practices
 
-### ✅ DO
+### Recommended
 
 - **Idempotenza**: plugin devono poter essere rieseguiti senza effetti collaterali
-- **Error handling**: cattura e logga errori, non crashare
+- **Error handling**: cattura e logga errori
 - **Timeout**: imposta timeout per operazioni esterne
 - **Logging**: logga eventi importanti per debugging
 - **Cleanup**: rilascia risorse in `destroy()`
 - **Validazione**: valida config in `init()`
 
-### ❌ DON'T
+### Avoid
 
-- **Blocking operations**: evita operazioni sincrone lunghe
-- **State condiviso**: evita state globale, usa context
+- **Blocking operations**: operazioni sincrone lunghe
+- **State condiviso**: state globale, usa context invece
 - **Assumere ordine**: eventi possono arrivare disordinati
 - **Hardcode config**: usa sempre `context.config`
 - **Ignorare errori**: logga sempre e gestisci gracefully

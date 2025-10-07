@@ -94,6 +94,18 @@ curl -X POST https://your-api.execute-api.eu-west-1.amazonaws.com/dev/events \
 
 ### EventBridge
 
+**AWS CLI:**
+```bash
+aws events put-events --entries '[
+  {
+    "Source": "custom.events",
+    "DetailType": "user.created",
+    "Detail": "{\"userId\":\"123\",\"email\":\"user@example.com\"}"
+  }
+]'
+```
+
+**SDK:**
 ```typescript
 import { EventBridgeClient, PutEventsCommand } from "@aws-sdk/client-eventbridge";
 
@@ -252,16 +264,14 @@ custom:
 
 ## Costi Stimati
 
-Per **1 milione di eventi/mese**:
-
-| Servizio       | Costo/mese |
-|----------------|-----------|
-| Lambda         | ~$5       |
-| SQS            | ~$0.80    |
-| DynamoDB       | ~$2.50    |
-| API Gateway    | ~$3.50    |
-| EventBridge    | ~$1.00    |
-| **Totale**     | **~$13**  |
+| Volume | Costo/mese | Note |
+|--------|-----------|------|
+| 1K | ~$0.10 | Free tier |
+| 10K | ~$0.10 | Free tier |
+| 100K | ~$1 | - |
+| 1M | ~$9 | - |
+| 10M | ~$93 | Possibili ottimizzazioni |
+| 100M | ~$450 | Con Redis + Provisioned DDB |
 
 [Analisi costi dettagliata →](./docs/cost-analysis.md)
 
@@ -291,10 +301,8 @@ aws logs tail /aws/lambda/eventbridge-router-consumer-dev --follow
 ## Roadmap
 
 - [ ] Worker Lambda separata per plugin sync
-- [ ] Circuit Breaker per plugin lenti
-- [ ] Replay System UI per eventi DLQ
 - [ ] Metrics Dashboard custom
-- [ ] Plugin Marketplace
+- [ ] ElastiCache al posto di DynamoDB per deduplicazione
 
 ## Limitazioni
 
@@ -306,7 +314,7 @@ aws logs tail /aws/lambda/eventbridge-router-consumer-dev --follow
 
 ### Performance
 - Cold start: ~1-2s prima invocazione Lambda
-- Deduplication window: 30 giorni (TTL DynamoDB)
+- Deduplication window: 7 giorni (TTL DynamoDB)
 - Max latency: 5 secondi (SQS batch window)
 
 ## Contributing
@@ -323,6 +331,6 @@ MIT
 
 ## Support
 
-- Issues: [GitHub Issues](https://github.com/yourusername/eventbridge-router/issues)
+- Issues: [GitHub Issues](https://github.com/sdiaco/eventbridge-router/issues)
 - Docs: [./docs](./docs/)
-- Email: your-email@example.com
+- Email: diacosimone00@gmail.com

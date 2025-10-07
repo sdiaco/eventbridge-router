@@ -202,7 +202,7 @@ try {
 | `5xx` | Server error (automatic retry) |
 | `4xx` | Client error (no retry) |
 
-## Best Practices per EventBridge Router
+## Best Practices
 
 ### 1. Client dedicati per servizio
 

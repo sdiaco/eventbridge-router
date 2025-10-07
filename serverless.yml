@@ -27,6 +27,7 @@ provider:
       allowedHeaders:
         - Content-Type
         - Authorization
+        - X-API-Key
       allowCredentials: false
 
   tags:
@@ -102,8 +103,8 @@ custom:
     prod: 5
 
   sqsVisibilityTimeout:
-    dev: 300
-    prod: 300
+    dev: 120
+    prod: 180
 
   # DynamoDB TTL (30 days)
   ttlDays: 30
