@@ -143,11 +143,5 @@ INFO  Batch completed: 7 succeeded, 1 failed in 234ms
 
 ## Limitazioni Attuali
 
-⚠️ **Sync Worker Plugins**: non implementati, viene solo loggato warning
-⚠️ **Secondary Queue**: non utilizzata (integrazione futura per worker)
-
-## Prossimi Step
-
-1. Implementare invocazione Lambda worker per sync worker plugins
-2. Aggiungere metriche CloudWatch
-3. Implementare replay eventi da DynamoDB
+- **Sync Worker Plugins**: non implementati, viene solo loggato warning
+- **Secondary Queue**: non utilizzata (integrazione futura per worker)
