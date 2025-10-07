@@ -30,6 +30,12 @@ provider:
         - Authorization
       allowCredentials: false
 
+  tags:
+    # Tag su tutte le risorse
+    Service: ${self:service}
+    Stage: ${self:provider.stage}
+    Project: EventBridgeRouter
+
   iam:
     role:
       statements:
